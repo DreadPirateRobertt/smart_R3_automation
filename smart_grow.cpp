@@ -1,3 +1,12 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <MicroLCD.h>
+
+// Configuracao do Display LCD
+
+LCD_SH1106 lcd;
+//LCD_SSD1306 lcd;
+
 #define pinVerde 2
 #define pinAmarelo 3
 #define pinVermelho 4
@@ -5,9 +14,8 @@
 #define rele_bomba 6
 #define pinoSensorUmidade 8
 #define rele_luz 7
+
 //const int pinoSensorUmidade = A0; // Defina o pino do sensor de umidade
-unsigned long tempoLigado = 18 * 60 * 60 * 1000; // 18 horas em milissegundos 
-unsigned long tempoDesligado = 6 * 60 * 60 * 1000; // 6 horas em milissegundos
 
 
 void semaforo(bool verde, bool amarelo, bool vermelho) {
@@ -17,14 +25,10 @@ void semaforo(bool verde, bool amarelo, bool vermelho) {
     delay(2000); // 2 segundos
 }
 
-void controle_irrigacao(bool comando_bomba){
-    digitalWrite(rele_bomba, comando_bomba ? HIGH : LOW); // Liga ou desliga a bomba de agua
-    delay(20000); // 1min
-    digitalWrite(rele_bomba, LOW); // desliga a bomba de agua
-}
-
 void controle_luminosidade(){
     // sistema de luminosidade
+    unsigned long tempoLigado = 18 * 60 * 60 * 1000; // 18 horas em milissegundos 
+    unsigned long tempoDesligado = 6 * 60 * 60 * 1000; // 6 horas em milissegundos
     unsigned long tempoAtual = millis() % (tempoLigado + tempoDesligado);
     if (tempoAtual < tempoLigado) {
         digitalWrite(pinRelay, HIGH); // Liga o relé
@@ -33,7 +37,7 @@ void controle_luminosidade(){
     }
 }
 
-void sensor_umidade() {
+void sensor_umidade(){
     unsigned long horaAtual = controle_luminosidade(); // Obtém a hora atual usando a função controle_luminosidade
 
     int umidade = analogRead(pinoSensorUmidade); // Lê o valor da umidade do solo
@@ -42,11 +46,13 @@ void sensor_umidade() {
     // Verifica os valores lidos e chama a função semaforo com os argumentos corretos
     if (porcentagem > 70) {
         semaforo(true, false, false); // Liga apenas o LED verde
+        digitalWrite(rele_bomba, LOW);
     } else if (porcentagem >= 40 && umidade <= 70) {
         semaforo(false, true, false); // Liga apenas o LED amarelo
     } else {
         semaforo(false, false, true); // Liga apenas o LED vermelho
-        controle_irrigacao(true); // ligar sistema de irrigacao
+        //controle_irrigacao(true); // ligar sistema de irrigacao
+        digitalWrite(rele_bomba, HIGH);
     }
     Serial.print(porcentagem);
     Serial.println("%");
@@ -56,10 +62,19 @@ void sensor_umidade() {
 
 }
 
+void display_ssd1306(int porcentagem, unsigned long tempoAtual){
+    lcd.clear();
+    lcd.setFontSize(FONT_SIZE_MEDIUM);
+    lcd.print("Umidade do Solo: ");
+    lcd.print(porcentagem);
+    lcd.print("Tempo Atual: ")
+    lcd.print(tempoAtual);
 
+}
 
 void setup(){
     Serial.begin(9600);
+    lcd.begin();
     pinMode(pinoSensorUmidade, INPUT);  // configura saída para o sensor de umidade
     pinMode(pinVerde, OUTPUT); // Define o pino do LED verde embutido como saída
     pinMode(pinAmarelo, OUTPUT); // Define o pino do LED amarelo embutido como saída
@@ -68,16 +83,6 @@ void setup(){
     digitalWrite(rele_bomba, LOW);
     pinMode(rele_luz, OUTPUT); // configura saída para o sinal relé
     digitalWrite(rele_luz, LOW); 
-}
-
-void display_ssd1306(int porcentagem, unsigned long tempoAtual){
-    lcd.clear();
-    lcd.setFontSize(FONT_SIZE_MEDIUM);
-    lcd.println("Umidade do Solo: ");
-    lcd.print(porcentagem);
-    lcd.println("Tempo Atual: ")
-    lcd.print(tempoAtual);
-
 }
 
 //void real_time_temp_ds3231(){}
