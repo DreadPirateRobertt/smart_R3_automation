@@ -1,2 +1,2 @@
-# smart_plant_grow
-smart_plant_eletronic
+# Smart project automation
+
